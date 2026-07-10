@@ -1,4 +1,4 @@
-// deobfuscator_v5.js
+// deobfuscator.js
 // Phiên bản hoàn chỉnh, test với file XHider của bạn.
 
 const fs = require('fs');
