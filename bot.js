@@ -1,12 +1,12 @@
 // bot.js
 const http = require('http');
 const { Client, GatewayIntentBits, AttachmentBuilder } = require('discord.js');
-const { deobfuscate } = require('./deobfuscator');
+const { deobfuscate } = require('./deobfuscator_v5');
 
-const BOT_TOKEN = process.env.BOT_TOKEN; // Lấy từ biến môi trường
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 if (!BOT_TOKEN) {
-    console.error('Thiếu BOT_TOKEN trong biến môi trường!');
+    console.error('Missing BOT_TOKEN');
     process.exit(1);
 }
 
@@ -18,9 +18,7 @@ const client = new Client({
     ]
 });
 
-client.on('ready', () => {
-    console.log(`✅ Bot online: ${client.user.tag}`);
-});
+client.on('ready', () => console.log(`✅ ${client.user.tag}`));
 
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
@@ -33,36 +31,34 @@ client.on('messageCreate', async (message) => {
             const res = await fetch(attachment.url);
             code = await res.text();
         } else {
-            const linkMatch = message.content.match(/(https?:\/\/\S+\.lua(?:\?\S*)?)/);
-            if (linkMatch) {
-                const res = await fetch(linkMatch[0]);
+            const link = message.content.match(/(https?:\/\/\S+\.lua(?:\?\S*)?)/);
+            if (link) {
+                const res = await fetch(link[0]);
                 code = await res.text();
             }
         }
 
-        if (!code) {
-            return message.reply('❌ Đính kèm file .lua hoặc link raw .lua.');
-        }
+        if (!code) return message.reply('❌ Cần file .lua hoặc link raw.');
 
-        if (!code.includes('XHider') && !code.includes('local u,V')) {
-            return message.reply('⚠️ File không phải XHider obfuscated.');
+        // Kiểm tra XHider
+        if (!code.includes('local u,V') && !code.includes('XHider')) {
+            return message.reply('⚠️ Không phải XHider.');
         }
 
         try {
             const clean = deobfuscate(code);
-            const buffer = Buffer.from(clean, 'utf-8');
-            const file = new AttachmentBuilder(buffer, { name: 'deobfuscated.lua' });
-            await message.reply({ content: '✅ Deobfuscate thành công!', files: [file] });
-        } catch (err) {
-            await message.reply(`❌ Lỗi: ${err.message}`);
+            const buf = Buffer.from(clean, 'utf-8');
+            const file = new AttachmentBuilder(buf, { name: 'deobfuscated.lua' });
+            await message.reply({ content: '✅ Thành công!', files: [file] });
+        } catch (e) {
+            await message.reply(`❌ Lỗi: ${e.message}`);
         }
     }
 });
 
-// HTTP server để Render giữ process sống
 http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('Bot is running');
+    res.writeHead(200);
+    res.end('OK');
 }).listen(process.env.PORT || 3000);
 
-client.login(BOT_TOKEN); 
+client.login(BOT_TOKEN);
